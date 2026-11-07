@@ -1,0 +1,109 @@
+global:
+  # -- Global container registry for images using in this chart
+  registry: "ghcr.io"
+  # -- Additional labels that add to all resources
+  commonLabels: {}
+  # -- Additional annotations that add to all resources
+  commonAnnotations: {}
+
+# -- Override Release Name, this is useful when you include this chart multiple times
+nameOverride: ""
+
+# -- ConfigMap generator
+config:
+  data: {}
+
+# -- Configure CronJob
+cronjob:
+  # -- Convert [Job] to [CronJob]
+  enabled: false
+  # -- (map) Additional annotations for [CronJob]
+  annotations: {}
+  # -- (map) Additional labels for [CronJob]
+  labels: {}
+  # -- Forbids concurrent runs, skipping next run if previous hasn't finished yet.
+  concurrencyPolicy: "Forbid"
+  # -- [Crontab] schedule, defaults to run every hour.
+  schedule: "0 * * * *"
+  # -- Time zone for the CronJob schedule
+  timeZone: "UTC"
+  # -- Set suspend to true to disable the CronJob.
+  suspend: false
+  # -- The number of failed finished jobs to retain. Value must be non-negative integer.
+  failedJobsHistoryLimit: 1
+  # -- The number of successful finished jobs to retain. Value must be non-negative integer.
+  successfulJobsHistoryLimit: 1
+  # -- Optional deadline in seconds for starting the job if it misses scheduled time for any reason
+  startingDeadlineSeconds:
+
+# -- Configure Job Template
+job:
+  # -- Override the Job resource name. When set, this value is used instead of the default format (`<releaseName>-job-<imageTag>`). Only use this if you need a stable Job name (e.g., on-demand jobs that should not be recreated on unrelated releases).
+  nameOverride: ""
+  # -- (map) Additional annotations for [Job]
+  annotations: {}
+  # -- (map) Additional labels for [Job]
+  labels: {}
+  # -- Name of the existing service account
+  serviceAccountName: ""
+  # -- (map) Additional annotations for [Pod] created by [Job]
+  podAnnotations: {}
+  # -- (map) Additional labels for [Pod]
+  podLabels: {}
+  # -- The number of retries before marking this job failed
+  backoffLimit: 3
+  # -- The desired number of successfully finished pods the job should be run with.
+  completions: 1
+  # -- Maximum desired number of pods the job should run at any given time
+  parallelism:
+  # -- The duration in seconds since the startTime that the job may be continuously active before the system terminates it
+  activeDeadlineSeconds:
+  # -- After ttlSecondsAfterFinished seconds the Job finishes, it is eligible to be automatically deleted.
+  # -- If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.
+  ttlSecondsAfterFinished: 3600
+  # -- Restart policy for all containers within the pod
+  restartPolicy: "Never"
+  # -- [Pod] security context, which applies for all containers
+  podSecurityContext:
+    runAsUser: 0
+  # -- App [Container]
+  # @default -- `{...}` (See [values.yaml])
+  container:
+    # -- App container name
+    name: app
+    # -- Image for app container
+    image:
+      # -- Image repository (required)
+      repository: "org/service"
+      # -- Image tag, which is completed during CI build
+      tag: ""
+      # -- Image pull policy
+      pullPolicy: IfNotPresent
+    # -- Command to override the container image ENTRYPOINT
+    command: []
+    # -- Default args for the app container
+    args: []
+    # -- (tpl/array) Additional environment variables to pass individually to app container
+    env: []
+    # -- (tpl/array) Additional environment variables to pass as Configmap, Secret
+    envFrom: []
+    # -- Resource limits and requests for the application controller pods, we do not to specify resources.limit.cpu here to let the container be burstable.
+    resources:
+      limits:
+        cpu: "200m"
+        memory: "128Mi"
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+    # -- (tpl/array) Additional [VolumeMounts] to the main container
+    volumeMounts: []
+    # -- Security context for app container
+    securityContext: {}
+  # -- (tpl/array) Default [Volumes] to the pod
+  volumes: []
+  # -- (map) [Node selector]
+  nodeSelector: {}
+  # -- (tpl/array) [Tolerations] for use with node taints
+  tolerations: []
+  # -- Assign custom [affinity] rules
+  affinity: {}

@@ -1,0 +1,24 @@
+{{- if .Values.service.enabled -}}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- include "common.annotations.merge" (list . .Values.service.annotations) | indent 2 }}
+  {{- include "common.labels.merge" (list . .Values.service.labels) | indent 2 }}
+  name: {{ include "common.name" . }}
+spec:
+  sessionAffinity: {{ .Values.service.sessionAffinity }}
+  type: {{ .Values.service.type }}
+  ports:
+    - name: {{ default (include "common.name" .) .Values.service.portName }}
+      port: {{ default .Values.deployment.container.port .Values.service.port }}
+      targetPort: {{ default .Values.deployment.container.port .Values.deployment.container.targetPort }}
+      protocol: TCP
+    {{- with .Values.service.extraPorts }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  selector:
+    {{- include "common.selectorLabels" . | nindent 4 }}
+  {{- if .Values.service.internalTrafficPolicy }}
+  internalTrafficPolicy: {{ .Values.service.internalTrafficPolicy }}
+  {{- end }}
+{{- end }}

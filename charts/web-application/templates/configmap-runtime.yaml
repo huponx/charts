@@ -1,0 +1,16 @@
+{{- with .Values.config.runtime }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  {{- include "common.annotations.merge" (list $ dict) | indent 2 }}
+  labels:
+    {{- include "common.labels" (dict "context" $) | nindent 4 }}
+  name: {{ include "common.name" $ }}-runtime-config
+data:
+  config.js: |
+    window.__env__ = {
+    {{- range $key, $val := .data }}
+      {{ $key }}: {{ $val | quote }},
+    {{- end }}
+    };
+{{- end }}

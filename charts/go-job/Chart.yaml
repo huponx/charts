@@ -1,0 +1,13 @@
+apiVersion: v2
+name: go-job
+description: This is a Go job or cron job chart.
+type: application
+keywords:
+  - language:go
+  - job
+  - cronjob
+version: 1.0.0
+maintainers:
+  - name: Hung Pham
+    email: dev.hungpham@gmail.com
+    url: https://github.com/huponx

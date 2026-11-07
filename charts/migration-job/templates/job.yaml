@@ -1,0 +1,93 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  {{- include "common.annotations.merge" (list . .Values.annotations) | indent 2 }}
+  labels:
+    helm.sh/chart: {{ include "common.chart" . }}
+    {{- include "common.selectorLabels" . | nindent 4 }}
+    {{- with (.Values.global).commonLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  name: {{ .Values.jobNameOverride | default (printf "%s-db-migrate-%s" (include "common.name" .) .Values.container.image.tag) | trunc 63 | trimSuffix "-" }}
+spec:
+  {{- with .Values.backoffLimit }}
+  backoffLimit: {{ . }}
+  {{- end }}
+  {{- with .Values.ttlSecondsAfterFinished }}
+  ttlSecondsAfterFinished: {{ . }}
+  {{- end }}
+  {{- with .Values.completions }}
+  completions: {{ . }}
+  {{- end }}
+  {{- with .Values.parallelism }}
+  parallelism: {{ . }}
+  {{- end }}
+  {{- with .Values.activeDeadlineSeconds }}
+  activeDeadlineSeconds: {{ . }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "common.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: flyway-migrate
+          {{- with .Values.container.args }}
+          args: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.container.command }}
+          command: {{ toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            {{- range $key, $value := .Values.container.rawEnv }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- with .Values.container.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- range .Values.secrets }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .key }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "common.name" . }}-{{ .Values.container.image.tag | sha256sum | trunc 8 }}
+          {{- with .Values.container.envFrom }}
+            {{- tpl (toYaml .) $ | nindent 12 }}
+          {{- end }}
+          image: {{ include "common.container.image" (dict "imageRoot" .Values.container.image "registry" .Values.global.registry "context" $) }}
+          imagePullPolicy: {{ .Values.container.image.pullPolicy }}
+          resources:
+            {{- toYaml .Values.container.resources | nindent 12 }}
+          {{- with .Values.container.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.container.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: {{ .Values.restartPolicy }}
