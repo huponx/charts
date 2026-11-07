@@ -63,7 +63,7 @@ jobs:
         chart: ${{ fromJSON(needs.detect.outputs.charts) }}
     steps:
       - uses: actions/checkout@v5
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
         with:
           version: ${{ env.HELM_VERSION }}
       - name: Install kubeconform
