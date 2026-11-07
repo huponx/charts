@@ -1,0 +1,23 @@
+{{- if .Values.pdb.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  {{- include "common.annotations.merge" (list . dict) | indent 2 }}
+  labels:
+    {{- include "common.labels" (dict "context" .) | nindent 4 }}
+  name: {{ include "common.name" . }}
+spec:
+  {{- if .Values.pdb.minAvailable }}
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  {{- end }}
+  {{- if .Values.pdb.maxUnavailable }}
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  {{- end }}
+  selector:
+    {{- with .Values.pdb.selector.matchExpressions }}
+    matchExpressions:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    matchLabels:
+      {{- include "common.selectorLabels" . | nindent 6 }}
+{{- end }}

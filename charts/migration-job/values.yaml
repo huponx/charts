@@ -1,0 +1,79 @@
+global:
+  # -- Global container registry for images using in this chart
+  registry: "ghcr.io"
+  # -- Additional labels that add to all resources
+  commonLabels: {}
+  # -- Additional annotations that add to all resources
+  commonAnnotations: {}
+
+# -- (map) Additional annotations for [Job]
+annotations: {}
+# -- Override Release Name, this is useful when you include this chart multiple times
+nameOverride: ""
+# -- Override the Job resource name. When set, this value is used instead of the default format (`<releaseName>-db-migrate-<imageTag>`). Only use this if you need a stable Job name (e.g., on-demand jobs that should not be recreated on unrelated releases).
+jobNameOverride: ""
+# -- (map) Additional labels for [Pod]
+podLabels:
+  role: migrate
+# -- The number of retries before marking this job failed
+backoffLimit: null
+# -- The desired number of successfully finished pods the job should be run with.
+completions: null
+# -- Maximum desired number of pods the job should run at any given time
+parallelism: null
+# -- The duration in seconds since the startTime that the job may be continuously active before the system terminates it
+activeDeadlineSeconds: null
+# -- After ttlSecondsAfterFinished seconds the Job finishes, it is eligible to be automatically deleted.
+# -- If this field is set to zero, the Job becomes eligible to be deleted immediately after it finishes.
+ttlSecondsAfterFinished: null
+# -- Restart policy for all containers within the pod
+restartPolicy: "Never"
+# -- Node selector must match a node's labels for the pod to be scheduled on that node
+nodeSelector: {}
+# -- Pod tolerations is to tolerate any taint in nodes
+tolerations: []
+# -- Pod affinity is a group of inter pod affinity scheduling rules
+affinity: {}
+# -- App [Container]
+# @default -- `{...}` (See [values.yaml])
+container:
+  # -- Default args for the container
+  args: ["migrate"]
+  # -- Command to override the container image ENTRYPOINT
+  command: []
+  # -- (tpl/array) Environment variables as Kubernetes
+  env: []
+  # -- (tpl/object) Raw environment variables as key, value pairs
+  rawEnv: {}
+  # -- (tpl/array) Environment variables to pass as Configmap, Secret
+  envFrom: []
+  # -- Image for container
+  image:
+    # -- Image repository (required)
+    repository: ""
+    # -- Image tag, which is completed during CI build
+    tag: ""
+    # -- Image pull policy, Kubernetes defaults it to "IfNotPresent"
+    pullPolicy: IfNotPresent
+  # -- Resource limits and requests for migration container
+  resources:
+    limits:
+      cpu: "1"
+      memory: 512Mi
+    requests:
+      cpu: "0.2"
+      memory: 256Mi
+  # -- Security context for the container
+  securityContext: {}
+  # -- (tpl/array) [VolumeMounts] to the container
+  volumeMounts: []
+# -- ConfigMap generator
+config:
+  # -- (map) Additional annotations for [ConfigMap]
+  annotations: {}
+  # -- (map) [ConfigMap] data
+  data: {}
+# -- (tpl/array) Secrets to pass to the container
+secrets: []
+# -- (tpl/array) [Volumes] to the pod
+volumes: []

@@ -1,0 +1,192 @@
+global:
+  # -- Global container registry for images using in this chart
+  registry: ghcr.io
+  # -- Additional labels that add to all resources
+  commonLabels: {}
+  # -- Additional annotations that add to all resources
+  commonAnnotations: {}
+
+config:
+  # -- (map) Additional annotations for [ConfigMap]
+  annotations: {}
+  # -- (map) [ConfigMap] data
+  data: {}
+  # -- (map) [ConfigMap] data for javascriptruntime
+  runtime:
+    # -- (map) [ConfigMap] data for javascript runtime
+    data: {}
+  
+deployment:
+  # -- Number of replicas, only rendered when autoscaling is disabled (or set to 0)
+  replicas: 1
+  # -- Additional annotations that add to the deployment resource
+  annotations:
+    reloader.stakater.com/auto: "true"
+  # -- Additional labels that add to the deployment resource
+  labels: {}
+  # -- Strategy for the deployment
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  # -- The number of old replicaset to retain to allow rollback
+  revisionHistoryLimit: 3
+  # -- Additional annotations that add to the pod resource
+  podAnnotations: {}
+  # -- Additional labels that add to the pod resource
+  podLabels: {}
+  # -- Service account name for the deployment
+  serviceAccountName: ""
+  # -- Affinity for the deployment
+  affinity: {}
+  # -- Container configuration
+  container:
+    # -- Image configuration
+    image:
+      repository: null
+      tag: null
+      pullPolicy: IfNotPresent
+    # -- Command for the container
+    command: []
+    # -- Arguments for the container
+    args: []
+    # -- Additional environment variables to pass individually to app container
+    env: []
+    # -- Additional environment variables to pass as Configmap, Secret
+    envFrom: []
+    # -- For the postStart and preStop [lifecycle] handlers
+    lifecycle: {}
+    # -- Indicates that the Pod has successfully initialized, no other probes are executed until this completes successfully.
+    startupProbe: null
+    # -- Periodic [probe] of container liveness. Container will be restarted if the probe fails.
+    livenessProbe: null
+    # -- Periodic [probe] of container service readiness. Container will be removed from service endpoints if the probe fails.
+    readinessProbe: null
+    # -- Default port number (required)
+    port: 80
+    # -- Additional ports name (required)
+    extraPorts: []
+    # -- Resource limits and requests for the application controller pods, we do not to specify resources.limit.cpu here to let the container be burstable.
+    resources:
+      limits:
+        cpu: "200m"
+        memory: "128Mi"
+      requests:
+        cpu: "50m"
+        memory: "64Mi"
+    # -- Security context for app container
+    securityContext: {}
+    # -- (tpl/array) Additional [VolumeMounts] to the main container
+    volumeMounts: []
+  # -- (tpl/array) Additional [Volumes] to the deployment
+  volumes: []
+  # -- Additional sidecar container
+  extraContainers: []
+  # -- Additional init container
+  extraInitContainers: []
+  # -- Security context, which applies for all containers
+  podSecurityContext: {}
+  # -- Node selector
+  nodeSelector: {}
+  # -- Time to gracefully terminate when a Pod is deleted or a node is being drained
+  terminationGracePeriodSeconds: 30
+  # -- The maximum time in seconds for a deployment to make progress before it is considered to be failed.
+  progressDeadlineSeconds: 600
+  # -- [Tolerations] for use with node taints
+  tolerations: []
+
+autoscaling:
+  # -- Enable or disable HorizontalPodAutoscaler
+  enabled: true
+  # -- Behavior for scaling
+  behavior:
+    # -- Policy for scaling Down, set to `null` to use Kubernetes' default
+    scaleDown:
+      policies:
+        - periodSeconds: 15
+          type: Percent
+          value: 100
+      stabilizationWindowSeconds: 300
+    # -- Policy for scaling Up, set to `null` to use Kubernetes' default
+    scaleUp:
+      policies:
+        - periodSeconds: 15
+          type: Percent
+          value: 100
+        - periodSeconds: 15
+          type: Pods
+          value: 4
+      selectPolicy: Max
+      stabilizationWindowSeconds: 0
+  # -- [Scaling metrics] defines external metrics configuration
+  metrics: []
+  # -- Lower limit for number of replicas can be scaled down
+  minReplicas: 1
+  # -- Upper limit for number of replicas can be scaled up
+  maxReplicas: 4
+  # -- Target CPU usage/request percentage to trigger scaling
+  targetCPUUtilizationPercentage: 80
+  # -- Target Memory usage/request percentage to trigger scaling
+  targetMemoryUtilizationPercentage: null
+
+pdb:
+  # -- Enable or disable [PodDisruptionBudget]
+  enabled: true
+  # -- Ensure that at least "minAvailable" pods will still be available after the eviction
+  minAvailable: 50%
+  # -- Ensure that at most "maxUnavailable" pods are unavailable after the eviction
+  maxUnavailable: null
+  # -- Extend selector to define additional match expressions
+  # @default -- `{...}` (See [values.yaml])
+  selector:
+    # -- A list of label selector requirements. The requirements are ANDed.
+    matchExpressions: []
+
+secret:
+  # -- Additional annotations for [Secret]
+  annotations: {}
+  # -- Secret] data, value should be plaintext
+  data: {}
+
+service:
+  # -- Enable or disable [Service]
+  enabled: true
+  # -- Additional annotations for [Service]
+  annotations: {}
+  # -- Additional labels for [Service]
+  labels: {}
+  # -- The port name to access this service, defaults to app name if not set
+  portName: null
+  # -- The port number to access this service, defaults to app port if not set
+  port: 443
+  # -- Determine how the Service is exposed
+  type: ClusterIP
+  # -- Enable client IP based session affinity, can be one of `ClientIP` and `None`
+  sessionAffinity: None
+  # -- (tpl/array) Additional ports for Service to expose many container ports
+  extraPorts: []
+  # -- Describe how nodes distribute service traffic they receive on the ClusterIP, can be either "Local" or "Cluster". The default value of Kubernetes is "Cluster".
+  internalTrafficPolicy: null
+
+ingress:
+  # -- Enable or disable [Ingress]
+  enabled: false
+  # -- Host
+  host: null
+  # @default -- `""` (defaults to `nginx`)
+  className: "nginx"
+  # -- Default path for the ingress host to match against the path of an incoming request.
+  path: /
+  # -- Determine path matching style, possible values are `Prefix`, `ImplementationSpecific`, `Exact`
+  pathType: Prefix
+  # -- Enable TLS for this ingress
+  tls: false
+  # -- Secret name for the TLS certificate
+  tlsSecretName: null
+  # -- (tpl/array) Additional paths for the default host
+  paths: []
+  # - path: /api/v1
+  #   pathType: ImplementationSpecific
+  #   serviceName: ""
+  #   servicePort: ""

@@ -1,0 +1,84 @@
+{{- if not .Values.cronjob.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  {{- include "common.annotations.merge" (list . .Values.job.annotations) | indent 2 }}
+  {{- include "common.labels.merge" (list . .Values.job.labels) | indent 2 }}
+  name: {{ .Values.job.nameOverride | default (printf "%s-%s" (include "common.job.name" .) .Values.job.container.image.tag) }}
+spec:
+  backoffLimit: {{ .Values.job.backoffLimit }}
+  ttlSecondsAfterFinished: {{ .Values.job.ttlSecondsAfterFinished }}
+  completions: {{ .Values.job.completions }}
+  {{- if .Values.job.parallelism }}
+  parallelism: {{ .Values.job.parallelism }}
+  {{- end }}
+  {{- if .Values.job.activeDeadlineSeconds }}
+  activeDeadlineSeconds: {{ .Values.job.activeDeadlineSeconds }}
+  {{- end }}
+  template:
+    metadata:
+      {{- include "common.annotations.merge" (list . .Values.job.podAnnotations) | indent 6 }}
+      {{- include "common.labels.merge" (list . .Values.job.podLabels) | indent 6 }}
+    spec:
+      {{- if .Values.job.serviceAccountName }}
+      serviceAccountName: {{ .Values.job.serviceAccountName }}
+      {{- end }}
+      {{- include "common.container.securityContext" .Values.job.podSecurityContext | indent 6 }}
+      containers:
+        - name: {{ .Values.job.container.name }}
+          image: {{ include "common.container.image" (dict "imageRoot" .Values.job.container.image "registry" .Values.global.registry "context" $) }}
+          imagePullPolicy: {{ .Values.job.container.image.pullPolicy }}
+          {{- include "common.container.resources" .Values.job.container.resources | indent 10 }}
+          {{- with .Values.job.container.command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.job.container.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            {{- include "common.container.env.DEFAULTS" . | indent 12 }}
+            {{- with .Values.job.container.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- range .Values.secrets }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .key }}
+            {{- end }}
+          {{- with .Values.job.container.envFrom }}
+          envFrom:
+            {{- tpl (toYaml .) $ | nindent 12 }}
+          {{- end }}
+          {{- with .Values.job.container.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- if or .Values.config.data .Values.job.volumes }}
+      volumes:
+        {{- if .Values.config.data }}
+        - configMap:
+            name: {{ include "common.name" . }}-{{ .Values.config.data | toJson | sha256sum | substr 0 10 }}
+          name: {{ include "common.cronjob.name" . }}-config
+        {{- end }}
+        {{- with .Values.job.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      restartPolicy: {{ .Values.job.restartPolicy }}
+      {{- with .Values.job.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.job.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.job.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

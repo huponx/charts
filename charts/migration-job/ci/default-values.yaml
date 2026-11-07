@@ -1,0 +1,4 @@
+container:
+  image:
+    repository: huponx/example-migrations
+    tag: 1.0.0

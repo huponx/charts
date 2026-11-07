@@ -1,0 +1,98 @@
+{{- if .Values.cronjob.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  {{- include "common.annotations.merge" (list . .Values.cronjob.annotations) | indent 2 }}
+  {{- include "common.labels.merge" (list . .Values.cronjob.labels) | indent 2 }}
+  name: {{ include "common.cronjob.name" . }}
+spec:
+  concurrencyPolicy: {{ .Values.cronjob.concurrencyPolicy }}
+  schedule: {{ .Values.cronjob.schedule | quote }}
+  timeZone: {{ .Values.cronjob.timeZone }}
+  suspend: {{ .Values.cronjob.suspend }}
+  {{- if .Values.cronjob.startingDeadlineSeconds }}
+  startingDeadlineSeconds: {{ .Values.cronjob.startingDeadlineSeconds }}
+  {{- end }}
+  failedJobsHistoryLimit: {{ .Values.cronjob.failedJobsHistoryLimit }}
+  successfulJobsHistoryLimit: {{ .Values.cronjob.successfulJobsHistoryLimit }}
+  jobTemplate:
+    metadata:
+      {{- include "common.annotations.merge" (list . .Values.job.annotations) | indent 6 }}
+      {{- include "common.labels.merge" (list . .Values.job.labels) | indent 6 }}
+    spec:
+      backoffLimit: {{ .Values.job.backoffLimit }}
+      ttlSecondsAfterFinished: {{ .Values.job.ttlSecondsAfterFinished }}
+      completions: {{ .Values.job.completions }}
+      {{- if .Values.job.parallelism }}
+      parallelism: {{ .Values.job.parallelism }}
+      {{- end }}
+      {{- if .Values.job.activeDeadlineSeconds }}
+      activeDeadlineSeconds: {{ .Values.job.activeDeadlineSeconds }}
+      {{- end }}
+      template:
+        metadata:
+          {{- include "common.annotations.merge" (list . .Values.job.podAnnotations) | indent 10 }}
+          {{- include "common.labels.merge" (list . .Values.job.podLabels) | indent 10 }}
+        spec:
+          {{- if .Values.job.serviceAccountName }}
+          serviceAccountName: {{ .Values.job.serviceAccountName }}
+          {{- end }}
+          {{- include "common.container.securityContext" .Values.job.podSecurityContext | indent 10 }}
+          containers:
+            - name: {{ .Values.job.container.name }}
+              image: {{ include "common.container.image" (dict "imageRoot" .Values.job.container.image "registry" .Values.global.registry "context" $) }}
+              imagePullPolicy: {{ .Values.job.container.image.pullPolicy }}
+              {{- include "common.container.resources" .Values.job.container.resources | indent 14 }}
+              {{- with .Values.job.container.command }}
+              command:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              {{- with .Values.job.container.args }}
+              args:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              env:
+                {{- include "common.container.env.DEFAULTS" . | indent 16 }}
+                {{- with .Values.job.container.env }}
+                {{- toYaml . | nindent 16 }}
+                {{- end }}
+                {{- range .Values.secrets }}
+                - name: {{ .name }}
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .secretName }}
+                      key: {{ .key }}
+                {{- end }}
+              {{- with .Values.job.container.envFrom }}
+              envFrom:
+                {{- tpl (toYaml .) $ | nindent 16 }}
+              {{- end }}
+              {{- with .Values.job.container.volumeMounts }}
+              volumeMounts:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+          {{- if or .Values.config.data .Values.job.volumes }}
+          volumes:
+            {{- if .Values.config.data }}
+            - configMap:
+                name: {{ include "common.name" . }}-{{ .Values.config.data | toJson | sha256sum | substr 0 10 }}
+              name: {{ include "common.cronjob.name" . }}-config
+            {{- end }}
+            {{- with .Values.job.volumes }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          restartPolicy: {{ .Values.job.restartPolicy }}
+          {{- with .Values.job.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.job.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.job.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- end }}
