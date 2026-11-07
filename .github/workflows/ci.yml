@@ -1,0 +1,140 @@
+name: CI
+
+# Required status check name: "ci" (aggregate job at the bottom).
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  HELM_VERSION: v3.16.4
+  KUBECONFORM_VERSION: v0.6.7
+  KUBERNETES_VERSION: 1.31.0
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      charts: ${{ steps.charts.outputs.charts }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Detect changed charts
+        id: charts
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          all=()
+          for f in charts/*/Chart.yaml; do all+=("$(basename "$(dirname "${f}")")"); done
+          changed=("${all[@]}")
+          # Test everything when there is no usable base or the workflows changed.
+          if [ -n "${BASE_SHA}" ] && ! [[ "${BASE_SHA}" =~ ^0+$ ]] && git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            files=$(git diff --name-only "${BASE_SHA}" HEAD)
+            if ! grep -q '^\.github/' <<<"${files}"; then
+              changed=()
+              while read -r c; do
+                [ -n "${c}" ] && [ -f "charts/${c}/Chart.yaml" ] && changed+=("${c}")
+              done < <(grep '^charts/' <<<"${files}" | cut -d/ -f2 | sort -u || true)
+            fi
+          fi
+          json=$(printf '%s\n' "${changed[@]}" | jq -R . | jq -sc 'map(select(length > 0))')
+          echo "charts=${json}" >> "${GITHUB_OUTPUT}"
+          echo "charts to verify: ${json}"
+
+  verify:
+    needs: detect
+    if: needs.detect.outputs.charts != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        chart: ${{ fromJSON(needs.detect.outputs.charts) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Install kubeconform
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" | tar xz -C /usr/local/bin kubeconform
+      - name: Lint, render and validate
+        env:
+          CHART: ${{ matrix.chart }}
+        run: |
+          set -euo pipefail
+          dir="charts/${CHART}"
+          shopt -s nullglob
+          files=("${dir}"/ci/*.yaml)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::${dir}/ci/*.yaml is required: add values that make the chart render"
+            exit 1
+          fi
+          for f in "${files[@]}"; do
+            echo "::group::${f}"
+            helm lint --strict "${dir}" -f "${f}"
+            helm template ci-test "${dir}" -f "${f}" > /tmp/rendered.yaml
+            kubeconform -strict -summary -ignore-missing-schemas \
+              -kubernetes-version "${KUBERNETES_VERSION}" /tmp/rendered.yaml
+            echo "::endgroup::"
+          done
+
+  version-check:
+    needs: detect
+    if: github.event_name == 'pull_request' && needs.detect.outputs.charts != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Chart version must be bumped
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          # Any change under a chart (templates, values, ci files) requires a new version.
+          changed=$(git diff --name-only "${BASE_SHA}" HEAD -- charts | cut -d/ -f2 | sort -u)
+          fail=0
+          for c in ${changed}; do
+            [ -f "charts/${c}/Chart.yaml" ] || continue
+            new=$(awk '/^version:/{print $2}' "charts/${c}/Chart.yaml")
+            if ! old_file=$(git show "${BASE_SHA}:charts/${c}/Chart.yaml" 2>/dev/null); then
+              echo "${c}: new chart (${new})"
+              continue
+            fi
+            old=$(awk '/^version:/{print $2}' <<<"${old_file}")
+            if [ "${old}" = "${new}" ]; then
+              echo "::error file=charts/${c}/Chart.yaml::${c} changed but version is still ${old}; bump it"
+              fail=1
+            else
+              echo "${c}: ${old} -> ${new}"
+            fi
+          done
+          exit "${fail}"
+
+  # Single required check; "skipped" is fine when no chart changed.
+  ci:
+    if: always()
+    needs: [detect, verify, version-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Aggregate
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for r in ${RESULTS}; do
+            case "${r}" in success|skipped) ;; *) echo "::error::job result: ${r}"; exit 1 ;; esac
+          done
