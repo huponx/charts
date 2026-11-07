@@ -1,0 +1,47 @@
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  {{- include "common.annotations.merge" (list . dict) | indent 2 }}
+  labels:
+    {{- include "common.labels" (dict "context" .) | nindent 4 }}
+  name: {{ include "common.name" . }}
+spec:
+  {{- if .Values.autoscaling.behavior }}
+  behavior:
+    {{- with .Values.autoscaling.behavior.scaleDown }}
+    scaleDown:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.autoscaling.behavior.scaleUp }}
+    scaleUp:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    {{- if .Values.autoscaling.targetCPUUtilizationPercentage }}
+    - resource:
+        name: cpu
+        target:
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+          type: Utilization
+      type: Resource
+    {{- end }}
+    {{- if .Values.autoscaling.targetMemoryUtilizationPercentage }}
+    - resource:
+        name: memory
+        target:
+          averageUtilization: {{ .Values.autoscaling.targetMemoryUtilizationPercentage }}
+          type: Utilization
+      type: Resource
+    {{- end }}
+    {{- with .Values.autoscaling.metrics }}
+    {{ tpl (. | toYaml) $ | nindent 4 }}
+    {{- end }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "common.name" . }}
+{{- end }}

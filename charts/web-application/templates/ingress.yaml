@@ -1,0 +1,39 @@
+{{- if .Values.ingress.enabled -}}
+{{- $paths := .Values.ingress.paths }}
+{{- if not $paths }}
+{{- $paths = list (dict "path" .Values.ingress.path "pathType" .Values.ingress.pathType) }}
+{{- end }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  {{- include "common.annotations.merge" (list . .Values.ingress.annotations) | indent 2 }}
+  labels:
+    {{- include "common.labels" (dict "context" .) | nindent 4 }}
+  name: {{ include "common.name" . }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className }}
+  {{- end }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          {{- range $paths }}
+          - path: {{ .path }}
+            pathType: {{ default $.Values.ingress.pathType .pathType }}
+            backend:
+              service:
+                name: {{ coalesce .serviceName (include "common.name" $) }}
+                port:
+                  number: {{ coalesce .servicePort $.Values.service.port $.Values.deployment.container.port }}
+          {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    - hosts:
+      - {{ .Values.ingress.host }}
+      {{- if .Values.ingress.tlsSecretName }}
+      secretName: {{ .Values.ingress.tlsSecretName }}
+      {{- end }}
+  {{- end }}
+
+{{- end }}

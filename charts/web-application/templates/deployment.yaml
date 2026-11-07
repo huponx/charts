@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- include "common.annotations.merge" (list . .Values.deployment.annotations) | indent 2 }}
+  {{- include "common.labels.merge" (list . .Values.deployment.labels) | indent 2 }}
+  name: {{ include "common.name" . }}
+
+spec:
+  {{- if and (kindIs "float64" .Values.deployment.replicas) (or (lt .Values.deployment.replicas 1.0) (not .Values.autoscaling.enabled)) }}
+  replicas: {{ .Values.deployment.replicas }}
+  {{- end }}
+  revisionHistoryLimit: {{ .Values.deployment.revisionHistoryLimit }}
+  {{- if .Values.deployment.progressDeadlineSeconds }}
+  progressDeadlineSeconds: {{ .Values.deployment.progressDeadlineSeconds }}
+  {{- end }}
+  {{- with .Values.deployment.strategy }}
+  strategy:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "common.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- include "common.annotations.merge" (list . .Values.deployment.podAnnotations) | indent 6 }}
+      labels:
+        {{- include "common.selectorLabels" . | nindent 8 }}
+        {{- with .Values.deployment.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- if .Values.deployment.serviceAccountName }}
+      serviceAccountName: {{ .Values.deployment.serviceAccountName }}
+      {{- end }}
+      {{- with .Values.deployment.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ include "common.name" . }}
+          image: {{ include "common.container.image" (dict "imageRoot" .Values.deployment.container.image "registry" .Values.global.registry "context" $) }}
+          {{- with .Values.deployment.container.image.pullPolicy }}
+          imagePullPolicy: {{ . }}
+          {{- end }}
+          {{- with .Values.deployment.container.command }}
+          command:
+            {{ toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.deployment.container.args }}
+          args:
+            {{ toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.hostIP
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            {{- with .Values.deployment.container.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.deployment.container.envFrom }}
+          envFrom:
+            {{- tpl (toYaml .) $ | nindent 12 }}
+          {{- end }}
+          {{- with .Values.deployment.container.lifecycle }}
+          lifecycle:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if .Values.deployment.container.livenessProbe }}
+          livenessProbe:
+            {{- toYaml .Values.deployment.container.livenessProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.deployment.container.startupProbe }}
+          startupProbe:
+            {{- toYaml .Values.deployment.container.startupProbe | nindent 12 }}
+          {{- end }}
+          {{- if .Values.deployment.container.readinessProbe }}
+          readinessProbe:
+            {{- toYaml .Values.deployment.container.readinessProbe | nindent 12 }}
+          {{- end }}
+          {{- if or .Values.deployment.container.port .Values.deployment.container.extraPorts }}
+          ports:
+            - containerPort: {{ int .Values.deployment.container.port }}
+            {{- with .Values.deployment.container.extraPorts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.deployment.container.resources | nindent 12 }}
+          {{- with .Values.deployment.container.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.deployment.container.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- range .Values.deployment.extraContainers }}
+        {{- tpl (include "common.container" (list $ .)) $ | indent 8 }}
+        {{- end }}
+      {{- with .Values.deployment.extraInitContainers }}
+      initContainers:
+        {{- range . }}
+        {{- tpl (include "common.container" (list $ .)) $ | indent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.deployment.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployment.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if .Values.deployment.terminationGracePeriodSeconds }}
+      terminationGracePeriodSeconds: {{ .Values.deployment.terminationGracePeriodSeconds }}
+      {{- end }}
+      {{- with .Values.deployment.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.deployment.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

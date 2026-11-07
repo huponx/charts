@@ -1,0 +1,11 @@
+apiVersion: v2
+name: python-application
+description: This is a Python application chart (e.g. gRPC / ASGI).
+type: application
+keywords:
+  - language:python
+version: 1.0.0
+maintainers:
+  - name: Hung Pham
+    email: dev.hungpham@gmail.com
+    url: https://github.com/huponx
