@@ -32,7 +32,7 @@ deployment:
   podAnnotations: {}
   # -- Additional labels that add to the pod resource
   podLabels: {}
-  # -- Service account name for the deployment
+  # -- Existing service account for the deployment (ignored when `serviceAccount.create` or `serviceAccount.name` is set)
   serviceAccountName: ""
   # -- Affinity for the deployment
   affinity: {}
@@ -94,6 +94,20 @@ deployment:
 
 # -- (tpl/array) Secrets to pass to the container
 secrets: []
+
+serviceAccount:
+  # -- Create a ServiceAccount for the pods (named `serviceAccount.name`, default the release name)
+  create: false
+  # -- Name of the ServiceAccount (created when `create` is true, otherwise an existing one)
+  name: ""
+  # -- Additional annotations for the [ServiceAccount]
+  annotations: {}
+
+rbac:
+  # -- Bind the pods' ServiceAccount to the ClusterRole `system:auth-delegator`, so the service can verify
+  # ServiceAccount tokens of its callers with TokenReview (grpcserver.WithKubeAuth in gocommon).
+  # Needs `serviceAccount.create` or a service account name.
+  authDelegator: false
 
 autoscaling:
   # -- Enable or disable HorizontalPodAutoscaler

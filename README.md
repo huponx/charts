@@ -8,7 +8,7 @@ oci://ghcr.io/huponx/charts/<chart>
 
 | Chart | Purpose | Renders |
 |-------|---------|---------|
-| `go-application` | Long running Go service (gRPC / HTTP) | Deployment, Service, HPA, PDB, Ingress, ConfigMap, Secret |
+| `go-application` | Long running Go service (gRPC / HTTP) | Deployment, Service, HPA, PDB, Ingress, ConfigMap, Secret, optional ServiceAccount and `system:auth-delegator` binding |
 | `python-application` | Python service (gRPC / ASGI) | same as `go-application` |
 | `web-application` | React / Vite frontend | same as `go-application` plus runtime ConfigMap |
 | `go-job` | One-off Go job, or CronJob with `cronjob.enabled=true` | Job or CronJob, ConfigMap |
@@ -47,6 +47,7 @@ Notes:
 - The registry defaults to `ghcr.io` (`global.registry`), the image becomes `ghcr.io/<repository>:<tag>`.
 - `replicas` is only rendered when `autoscaling.enabled=false` (or set to `0`); otherwise the HPA owns the count.
 - `ingress.paths` defaults to a single `ingress.path` / `ingress.pathType` rule when empty.
+- `go-application` only: `serviceAccount.create` creates a ServiceAccount for the pods and `rbac.authDelegator` binds it to the ClusterRole `system:auth-delegator`, which a gRPC service needs to verify the ServiceAccount tokens of its callers (`grpcserver.WithKubeAuth` in `gocommon`). The binding is cluster scoped and named `<name>-<namespace>-auth-delegator`. A caller that sends such tokens mounts a projected `serviceAccountToken` volume through `deployment.volumes` and `deployment.container.volumeMounts` (see `charts/go-application/ci/auth-values.yaml`).
 
 ## Layout
 

@@ -1,0 +1,20 @@
+{{- if .Values.rbac.authDelegator }}
+{{- $sa := include "common.serviceAccountName" . }}
+{{- if not $sa }}{{- fail "rbac.authDelegator needs serviceAccount.create or a service account name" }}{{- end }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  {{- include "common.annotations.merge" (list . dict) | indent 2 }}
+  labels:
+    {{- include "common.labels" (dict "context" .) | nindent 4 }}
+  # Cluster scoped: the namespace keeps the name unique when the chart is installed in several namespaces.
+  name: {{ printf "%s-%s-auth-delegator" (include "common.name" .) .Release.Namespace | trunc 63 | trimSuffix "-" }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: {{ $sa }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
