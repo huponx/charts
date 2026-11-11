@@ -20,18 +20,18 @@ The image repository and tag are **required**. A chart fails to render with a cl
 
 ```bash
 # application
-helm install courier oci://ghcr.io/huponx/charts/go-application --version 1.0.0 \
+helm install courier oci://ghcr.io/huponx/charts/go-application --version 1.0.1 \
   --set deployment.container.image.repository=huponx/courier \
   --set deployment.container.image.tag=v0.1.0 \
   --set deployment.container.port=9090
 
 # job: values live under `job.`
-helm install courier-sync oci://ghcr.io/huponx/charts/go-job --version 1.0.0 \
+helm install courier-sync oci://ghcr.io/huponx/charts/go-job --version 1.0.1 \
   --set job.container.image.repository=huponx/courier \
   --set job.container.image.tag=v0.1.0
 
 # migration: values live under `container.`
-helm install db-migrate oci://ghcr.io/huponx/charts/migration-job --version 1.0.0 \
+helm install db-migrate oci://ghcr.io/huponx/charts/migration-job --version 1.0.1 \
   --set container.image.repository=huponx/courier-migrations \
   --set container.image.tag=v0.1.0
 ```
@@ -39,8 +39,8 @@ helm install db-migrate oci://ghcr.io/huponx/charts/migration-job --version 1.0.
 Useful commands:
 
 ```bash
-helm show values oci://ghcr.io/huponx/charts/go-application --version 1.0.0
-helm pull oci://ghcr.io/huponx/charts/go-application --version 1.0.0 --untar
+helm show values oci://ghcr.io/huponx/charts/go-application --version 1.0.1
+helm pull oci://ghcr.io/huponx/charts/go-application --version 1.0.1 --untar
 ```
 
 Notes:
@@ -105,18 +105,17 @@ Everything below can be done with the `gh` CLI (UI paths in parentheses). Run it
 REPO=huponx/charts
 ```
 
-1. **Create the repository and push `main`** (`gh repo create $REPO --public --source . --push`, or create it in the UI). Merge the workflows to `main` first, while `main` is unprotected: status checks only show up in the ruleset picker after they have run once.
-2. **Actions permissions** so `GITHUB_TOKEN` can write packages and releases (UI: Settings > Actions > General > Workflow permissions > Read and write). The release job also declares `contents: write` and `packages: write`.
+1. **Actions permissions** so `GITHUB_TOKEN` can write packages and releases (UI: Settings > Actions > General > Workflow permissions > Read and write). The release job also declares `contents: write` and `packages: write`.
    ```bash
    gh api -X PUT repos/$REPO/actions/permissions/workflow -f default_workflow_permissions=write
    ```
-3. **Merge settings**: squash only, so the PR title is the commit subject (UI: Settings > General > Pull Requests).
+2. **Merge settings**: squash only, so the PR title is the commit subject (UI: Settings > General > Pull Requests).
    ```bash
    gh api -X PATCH repos/$REPO -F allow_squash_merge=true -F allow_merge_commit=false \
      -F allow_rebase_merge=false -F delete_branch_on_merge=true \
      -f squash_merge_commit_title=PR_TITLE -f squash_merge_commit_message=PR_BODY
    ```
-4. **Branch ruleset** for `main` (PR required, squash only, required checks `ci` and `pr-title`, no force push or deletion). Save as `main-ruleset.json` and apply (the file is only an input, do not commit it):
+3. **Branch ruleset** for `main` (PR required, squash only, required checks `ci` and `pr-title`, no force push or deletion). Save as `main-ruleset.json` and apply (the file is only an input, do not commit it):
    ```json
    {
      "name": "main",
@@ -158,9 +157,9 @@ REPO=huponx/charts
    gh api repos/$REPO/rulesets --jq '.[] | {id, name, enforcement}'   # verify
    ```
    Or import it in the UI: Settings > Rules > Rulesets > New ruleset > Import a ruleset. To change it later: `gh api repos/$REPO/rulesets/<id> --method PUT --input main-ruleset.json`. Rulesets on a private repo need a paid GitHub plan.
-5. **Optional tag ruleset** so published chart tags (`<chart>-<version>`) never move or disappear:
+4. **Optional tag ruleset** so published chart tags (`<chart>-<version>`) never move or disappear:
    ```bash
-   cat > /tmp/tag-ruleset.json <<'JSON'
+   cat > ./tag-ruleset.json <<'JSON'
    {
      "name": "protect release tags",
      "target": "tag",
@@ -170,11 +169,11 @@ REPO=huponx/charts
      "bypass_actors": []
    }
    JSON
-   gh api repos/$REPO/rulesets --method POST --input /tmp/tag-ruleset.json
+   gh api repos/$REPO/rulesets --method POST --input tag-ruleset.json
    ```
    Do not restrict tag *creation*: `release.yml` creates the tags with `GITHUB_TOKEN`.
-6. **First release**: merge a PR that changes a chart. `release.yml` pushes `ghcr.io/huponx/charts/<chart>` for every chart.
-7. **Package visibility** (UI only, GitHub has no stable CLI for this): your profile or org > Packages > `charts/<chart>` > Package settings:
+5. **First release**: merge a PR that changes a chart. `release.yml` pushes `ghcr.io/huponx/charts/<chart>` for every chart.
+6. **Package visibility** (UI only, GitHub has no stable CLI for this): your profile or org > Packages > `charts/<chart>` > Package settings:
    - set visibility to **Public**, or keep it private and use `helm registry login ghcr.io` with a classic PAT that has `read:packages`;
    - under *Manage Actions access* add `huponx/charts` with the **Write** role, otherwise later releases fail with `permission_denied`.
    Repeat for each chart package.
