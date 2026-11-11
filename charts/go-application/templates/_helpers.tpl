@@ -62,3 +62,15 @@ app: {{ include "common.name" . }}
     {{- printf "%s%s%s"  $repositoryName $separator $termination -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Name of the ServiceAccount used by the pods: the one created by this chart (serviceAccount.create),
+else serviceAccount.name, else deployment.serviceAccountName. Empty means the namespace default.
+*/}}
+{{- define "common.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
+{{- default (include "common.name" .) .Values.serviceAccount.name -}}
+{{- else -}}
+{{- default .Values.deployment.serviceAccountName .Values.serviceAccount.name -}}
+{{- end -}}
+{{- end }}
