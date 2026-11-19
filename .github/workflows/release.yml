@@ -42,6 +42,9 @@ jobs:
           owner="${GITHUB_REPOSITORY_OWNER,,}"
           registry="oci://ghcr.io/${owner}/charts"
           mkdir -p dist
+          # helm pull fails with "no such file" when the destination does not exist, even though the
+          # chart was found: create it so an already published version is reported as such.
+          mkdir -p /tmp/probe
           published=0
           for dir in charts/*/; do
             dir="${dir%/}"
