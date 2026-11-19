@@ -32,6 +32,10 @@ spec:
       {{- with include "common.serviceAccountName" . }}
       serviceAccountName: {{ . }}
       {{- end }}
+      {{- with .Values.deployment.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       {{- with .Values.deployment.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

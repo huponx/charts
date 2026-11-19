@@ -47,6 +47,7 @@ Notes:
 - The registry defaults to `ghcr.io` (`global.registry`), the image becomes `ghcr.io/<repository>:<tag>`.
 - `replicas` is only rendered when `autoscaling.enabled=false` (or set to `0`); otherwise the HPA owns the count.
 - `ingress.paths` defaults to a single `ingress.path` / `ingress.pathType` rule when empty.
+- Private images: `deployment.imagePullSecrets` (`job.imagePullSecrets` for `go-job`, top-level `imagePullSecrets` for `migration-job`) is a list of `name: <secret>` rendered as the Pod `imagePullSecrets`. The Secret must exist in the release namespace (for example `ghcr-pull`, created by `mm-ansible`).
 - `go-application` only: `serviceAccount.create` creates a ServiceAccount for the pods and `rbac.authDelegator` binds it to the ClusterRole `system:auth-delegator`, which a gRPC service needs to verify the ServiceAccount tokens of its callers (`grpcserver.WithKubeAuth` in `gocommon`). The binding is cluster scoped and named `<name>-<namespace>-auth-delegator`. A caller that sends such tokens mounts a projected `serviceAccountToken` volume through `deployment.volumes` and `deployment.container.volumeMounts` (see `charts/go-application/ci/auth-values.yaml`).
 
 ## Layout

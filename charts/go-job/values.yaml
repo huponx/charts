@@ -46,6 +46,8 @@ job:
   labels: {}
   # -- Name of the existing service account
   serviceAccountName: ""
+  # -- Secrets used to pull the image from a private registry (list of `name: <secret>`), e.g. `ghcr-pull`
+  imagePullSecrets: []
   # -- (map) Additional annotations for [Pod] created by [Job]
   podAnnotations: {}
   # -- (map) Additional labels for [Pod]
