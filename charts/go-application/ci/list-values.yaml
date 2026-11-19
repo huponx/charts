@@ -1,0 +1,20 @@
+# A list of scalars in config.data is rendered as a comma separated string.
+deployment:
+  container:
+    image:
+      repository: huponx/example
+      tag: 1.0.0
+config:
+  data:
+    PLAIN: "value"
+    ALLOWED:
+      - application:identity
+      - application:bvchain
+      - system:serviceaccount:application:bvreport
+    PORTS:
+      - 8080
+      - 9090
+    OBJECTS:
+      - name: a
+      - name: b
+    EMPTY: []
