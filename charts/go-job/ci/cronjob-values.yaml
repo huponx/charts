@@ -1,6 +1,8 @@
 cronjob:
   enabled: true
 job:
+  imagePullSecrets:
+    - name: ghcr-pull
   container:
     image:
       repository: huponx/example

@@ -4,8 +4,8 @@ description: This is a Go application chart.
 type: application
 keywords:
   - language:go
-version: 1.1.0
+version: 1.2.0
 maintainers:
   - name: Hung Pham
     email: dev.hungpham@gmail.com
-    url: https://github.com/huponx
+    url: https://github.com/hungp29

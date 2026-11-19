@@ -4,8 +4,8 @@ description: This is a Python application chart (e.g. gRPC / ASGI).
 type: application
 keywords:
   - language:python
-version: 1.0.0
+version: 1.1.0
 maintainers:
   - name: Hung Pham
     email: dev.hungpham@gmail.com
-    url: https://github.com/huponx
+    url: https://github.com/hungp29

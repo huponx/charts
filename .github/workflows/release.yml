@@ -50,9 +50,16 @@ jobs:
             version=$(awk '/^version:/{print $2}' "${dir}/Chart.yaml")
             tag="${name}-${version}"
 
-            if helm pull "${registry}/${name}" --version "${version}" --destination /tmp/probe >/dev/null 2>&1; then
+            # Only "not found" means "publish". Any other error (403, 401, network) must stop the
+            # release instead of being mistaken for a missing version.
+            if probe=$(helm pull "${registry}/${name}" --version "${version}" --destination /tmp/probe 2>&1); then
               echo "skip ${name} ${version}: already published"
               continue
+            fi
+            if ! grep -qiE 'not found|manifest unknown|name unknown' <<<"${probe}"; then
+              echo "::error::cannot check ${registry}/${name}:${version}: ${probe}"
+              echo "::error::If this is 403/denied, the package exists but this repo has no Write access: Package settings > Manage Actions access > add ${GITHUB_REPOSITORY} with Write."
+              exit 1
             fi
 
             values=()

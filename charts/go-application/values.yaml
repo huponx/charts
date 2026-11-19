@@ -34,6 +34,8 @@ deployment:
   podLabels: {}
   # -- Existing service account for the deployment (ignored when `serviceAccount.create` or `serviceAccount.name` is set)
   serviceAccountName: ""
+  # -- Secrets used to pull the image from a private registry (list of `name: <secret>`), e.g. `ghcr-pull`
+  imagePullSecrets: []
   # -- Affinity for the deployment
   affinity: {}
   # -- Container configuration

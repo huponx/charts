@@ -2,7 +2,7 @@ apiVersion: v2
 name: migration-job
 description: Kubernetes Job that runs Flyway database migrations against a PostgreSQL instance.
 type: application
-version: 1.0.0
+version: 1.1.0
 
 keywords:
   - flyway
@@ -13,4 +13,4 @@ keywords:
 maintainers:
   - name: Hung Pham
     email: dev.hungpham@gmail.com
-    url: https://github.com/huponx
+    url: https://github.com/hungp29

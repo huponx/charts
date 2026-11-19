@@ -1,4 +1,6 @@
 deployment:
+  imagePullSecrets:
+    - name: ghcr-pull
   replicas: 2
   container:
     image:
